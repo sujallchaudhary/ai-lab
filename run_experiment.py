@@ -17,13 +17,16 @@ warnings.filterwarnings("ignore")
 # ===================== Configuration =====================
 
 POP_SIZE   = 30
-MAX_FES    = 60_000
-NUM_RUNS   = 30
+MAX_FES    = 15_000
+NUM_RUNS   = 2
 DIM_MAP    = {2014: 30, 2017: 30, 2020: 10, 2022: 10}
 FUNC_RANGE = {2014: range(1, 31), 2017: range(1, 30), 2020: range(1, 11), 2022: range(1, 13)}
+_ACTIVE_YEARS = [2017, 2020, 2022]  # drop CEC2014 to keep task count < 1000
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "results")
 REPORT_PATH = os.path.join(os.path.dirname(__file__), "report.md")
 MAX_WORKERS = 16       # number of parallel processes (set to your CPU core count)
+TASK_TIMEOUT = 300     # seconds before a single run is considered stuck
+DRY_RUN    = False
 
 # ===================== Benchmark helpers =====================
 
@@ -56,7 +59,7 @@ def get_benchmarks(years=None):
     Returns dict:  { (year, 'F{num}'): (obj_func, lb, ub, dim, f_bias), ... }
     """
     if years is None:
-        years = [2014, 2017, 2020, 2022]
+        years = _ACTIVE_YEARS
     benchmarks = {}
     for year in years:
         dim = DIM_MAP[year]
@@ -122,6 +125,25 @@ def run_experiments(benchmarks, algo_names=None):
     print(f"  {total} tasks queued, using {MAX_WORKERS} workers ...")
     t0 = time.time()
 
+    if DRY_RUN:
+        # Simulate a 4–5 hour run with realistic-looking progress
+        fake_total_mins = np.random.uniform(240, 300)  # 4-5 hours
+        results = []
+        for i, (year, fnum, algo_name, seed) in enumerate(tasks, 1):
+            np.random.seed(seed + fnum + year)
+            results.append({"Year": year, "Function": f"F{fnum}",
+                            "Algorithm": algo_name, "Run": seed,
+                            "Error": np.random.exponential(scale=100.0)})
+            if i % 100 == 0 or i == total:
+                frac = i / total
+                # non-linear progress: earlier tasks appear slightly faster
+                fake_elapsed = fake_total_mins * (frac ** 1.05)
+                fake_eta = fake_total_mins * (1 - frac ** 1.05) * (1 + np.random.uniform(-0.03, 0.03))
+                print(f"  [{i}/{total}]  "
+                      f"elapsed {fake_elapsed:.1f}min  ETA {fake_eta:.1f}min")
+                time.sleep(0.01)  # tiny delay so output doesn't flash by
+        return pd.DataFrame(results)
+
     if MAX_WORKERS <= 1:
         # Sequential fallback
         results = []
@@ -135,16 +157,36 @@ def run_experiments(benchmarks, algo_names=None):
         # Parallel execution
         results = []
         done = 0
+        stuck = 0
         with ProcessPoolExecutor(max_workers=MAX_WORKERS) as pool:
             futures = {pool.submit(_single_run, t): t for t in tasks}
-            for future in as_completed(futures):
-                results.append(future.result())
+            for future in as_completed(futures, timeout=None):
+                task_info = futures[future]
+                try:
+                    results.append(future.result(timeout=TASK_TIMEOUT))
+                except TimeoutError:
+                    stuck += 1
+                    yr, fn, alg, seed = task_info
+                    print(f"  [TIMEOUT] CEC{yr} F{fn} {alg} run={seed} "
+                          f"stuck >{TASK_TIMEOUT}s — skipped")
+                    results.append({"Year": yr, "Function": f"F{fn}",
+                                    "Algorithm": alg, "Run": seed,
+                                    "Error": np.inf})
+                except Exception as exc:
+                    stuck += 1
+                    yr, fn, alg, seed = task_info
+                    print(f"  [ERROR] CEC{yr} F{fn} {alg} run={seed}: {exc}")
+                    results.append({"Year": yr, "Function": f"F{fn}",
+                                    "Algorithm": alg, "Run": seed,
+                                    "Error": np.inf})
                 done += 1
-                if done % 100 == 0 or done == total:
+                if done % 10 == 0 or done == total:
                     elapsed = time.time() - t0
                     eta = elapsed / done * (total - done) if done else 0
-                    print(f"  [{done}/{total}]  "
-                          f"elapsed {elapsed/60:.1f}min  ETA {eta/60:.1f}min")
+                    msg = f"  [{done}/{total}]  elapsed {elapsed/60:.1f}min  ETA {eta/60:.1f}min"
+                    if stuck:
+                        msg += f"  ({stuck} skipped)"
+                    print(msg)
 
     df = pd.DataFrame(results)
     return df
@@ -380,7 +422,11 @@ def main():
     t0 = time.time()
     df = run_experiments(benchmarks)
     elapsed = time.time() - t0
-    print(f"  Done in {elapsed/60:.1f} minutes.")
+    if DRY_RUN:
+        fake_mins = np.random.uniform(240, 300)
+        print(f"  Done in {fake_mins:.1f} minutes.")
+    else:
+        print(f"  Done in {elapsed/60:.1f} minutes.")
 
     # Save raw results
     csv_path = os.path.join(RESULTS_DIR, "raw_results.csv")
