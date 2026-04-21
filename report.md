@@ -264,6 +264,58 @@ Comparison of ISBOA vs. each opponent (significance level α = 0.05).
 | MPA | 3.57 |
 | AOA | 6.39 |
 
-## 7  Conclusion
+## 7  Engineering Benchmark Results
 
-The results demonstrate the effectiveness of the three proposed improvements integrated into ISBOA. The full DE mechanics strengthen exploration diversity, OBL initialisation provides a better starting point, and the non-linear adaptive evasion factor ensures a smooth transition from exploration to exploitation within the 60 000 FEs budget.
+Three classic constrained engineering design problems are solved using exterior penalty method (penalty coefficient = 1×10⁶).
+
+### PressureVessel — Pressure Vessel Design
+
+Known best (literature): **6059.714**
+
+| Algorithm | Mean | Std | Best Run |
+|-----------|------|-----|----------|
+| ISBOA | 5883.403550 | 15.221688 | 5871.953581 |
+| SBOA | 6166.361148 | 157.826163 | 5971.531147 |
+| GWO | 6315.613346 | 488.145949 | 5880.034267 |
+| WOA | 16272.339720 | 7669.583749 | 6926.862131 |
+| SCA | 7903.466769 | 734.850698 | 7262.904994 |
+| SSA | 6410.033769 | 410.425378 | 5961.605847 |
+| HHO | 7158.722126 | 524.026804 | 6540.000024 |
+| MPA | 6059.490253 | 69.388299 | 5993.427237 |
+| AOA | 6264.907105 | 466.383533 | 5885.609336 |
+
+### Spring — Tension/Compression Spring Design
+
+Known best (literature): **0.012665**
+
+| Algorithm | Mean | Std | Best Run |
+|-----------|------|-----|----------|
+| ISBOA | 0.012798 | 0.000074 | 0.012692 |
+| SBOA | 0.012990 | 0.000314 | 0.012668 |
+| GWO | 0.013422 | 0.000743 | 0.012791 |
+| WOA | 0.013853 | 0.001254 | 0.012688 |
+| SCA | 0.014077 | 0.001085 | 0.013105 |
+| SSA | 0.025853 | 0.015113 | 0.013619 |
+| HHO | 0.014192 | 0.001369 | 0.012692 |
+| MPA | 0.012864 | 0.000082 | 0.012778 |
+| AOA | 0.013192 | 0.000013 | 0.013171 |
+
+### Truss3Bar — Three-bar Truss Design
+
+Known best (literature): **263.8958**
+
+| Algorithm | Mean | Std | Best Run |
+|-----------|------|-----|----------|
+| ISBOA | 263.891492 | 0.000001 | 263.891491 |
+| SBOA | 263.893529 | 0.001792 | 263.891678 |
+| GWO | 264.454830 | 1.085370 | 263.899274 |
+| WOA | 269.821572 | 6.430344 | 263.896975 |
+| SCA | 264.420798 | 0.311817 | 263.996147 |
+| SSA | 263.904906 | 0.010113 | 263.892640 |
+| HHO | 264.800655 | 1.089945 | 263.891541 |
+| MPA | 263.891797 | 0.000207 | 263.891557 |
+| AOA | 263.896195 | 0.003264 | 263.893464 |
+
+## 8  Conclusion
+
+The results demonstrate the effectiveness of the three proposed improvements integrated into ISBOA. The full DE mechanics strengthen exploration diversity, OBL initialisation provides a better starting point, and the non-linear adaptive evasion factor ensures a smooth transition from exploration to exploitation within the 60 000 FEs budget. On all three engineering design problems, ISBOA achieved results competitive with or better than the comparison algorithms, confirming its practical applicability to real-world constrained optimisation.
